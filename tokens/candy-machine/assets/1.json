@@ -1,0 +1,15 @@
+{
+    "name": "Lazy koala #1",
+    "symbol": "koala",
+    "description": "Kool Koala Koalalala!",
+    "image": "1.png",
+    "attributes": [],
+    "properties": {
+        "files": [
+            {
+                "uri": "1.png",
+                "type": "image/png"
+            }
+        ]
+    }
+}
