@@ -1,4 +1,13 @@
 import {
+    Button,
+    Container,
+    Heading,
+    VStack,
+    Text,
+    HStack,
+    Image,
+} from '@chakra-ui/react';
+import {
     FC,
     MouseEventHandler,
     useCallback,
@@ -6,31 +15,19 @@ import {
     useMemo,
     useState,
 } from 'react';
-import {
-    Button,
-    Container,
-    Heading,
-    HStack,
-    Text,
-    VStack,
-    Image,
-} from '@chakra-ui/react';
-import { ArrowForwardIcon } from '@chakra-ui/icons';
-import { useRouter } from 'next/router';
+import { PublicKey } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import {
+    Metaplex,
+    walletAdapterIdentity,
     CandyMachine,
     CandyMachineV2,
-    Metaplex,
-    PublicKey,
-    walletAdapterIdentity,
 } from '@metaplex-foundation/js';
+import { useRouter } from 'next/router';
 
 const Connected: FC = () => {
-    const router = useRouter();
-    const walletAdapter = useWallet();
     const { connection } = useConnection();
-
+    const walletAdapter = useWallet();
     const [candyMachine, setCandyMachine] = useState<CandyMachineV2>();
     const [isMinting, setIsMinting] = useState(false);
 
@@ -41,37 +38,62 @@ const Connected: FC = () => {
     }, [connection, walletAdapter]);
 
     useEffect(() => {
-        if (!metaplex) return;
+        handleInitialLoad();
+    }, [metaplex, walletAdapter]);
 
-        metaplex
-            .candyMachinesV2()
-            .findByAddress({
-                address: new PublicKey(
-                    '5jn7DdFL6CnSCkhxZ65k5obmcb58cpx8rX4CmwNXSDAa'
-                ),
-            })
+    const handleInitialLoad = useCallback(async () => {
+        if (!metaplex || !walletAdapter.publicKey) return;
 
-            .then((candyMachine) => {
-                console.log(candyMachine);
-                setCandyMachine(candyMachine);
-            })
-            .catch((error) => {
-                alert(error);
-            });
-    }, [metaplex]);
+        try {
+            const candymachine = await metaplex
+                .candyMachinesV2()
+                .findByAddress({
+                    address: new PublicKey(
+                        process.env.NEXT_PUBLIC_CANDY_MACHINE_ADDRESS ?? ''
+                    ),
+                });
+
+            const nfts = await metaplex
+                .nfts()
+                .findAllByOwner({ owner: walletAdapter.publicKey });
+
+            const nft = nfts.find(
+                (nft) =>
+                    nft.collection?.address.toBase58() ===
+                    candymachine.collectionMintAddress?.toBase58()
+            );
+
+            if (nft) {
+                const metadata = await (await fetch(nft.uri)).json();
+                router.push(
+                    `/stake?mint=${nft.address}&imageSrc=${metadata?.image}`
+                );
+            }
+
+            setCandyMachine(candymachine);
+        } catch (error) {
+            alert(error);
+        }
+    }, [metaplex, walletAdapter, candyMachine]);
+
+    const router = useRouter();
 
     const handleClick: MouseEventHandler<HTMLButtonElement> = useCallback(
         async (event) => {
             if (event.defaultPrevented) return;
-            if (!walletAdapter.connected || !candyMachine) return;
+
+            console.log(candyMachine);
+
+            if (!walletAdapter.connected || !candyMachine) {
+                return;
+            }
 
             try {
                 setIsMinting(true);
-                const nft = await metaplex
-                    .candyMachinesV2()
-                    .mint({ candyMachine });
+                const nft = await metaplex.candyMachinesV2().mint({
+                    candyMachine,
+                });
 
-                console.log(nft);
                 router.push(`/newMint?mint=${nft.nft.address.toBase58()}`);
             } catch (error) {
                 alert(error);
@@ -99,7 +121,7 @@ const Connected: FC = () => {
                     <Text color="bodyText" fontSize="xl" textAlign="center">
                         Each buildoor is randomly generated and can be staked to
                         receive
-                        <Text as="b"> $BLD</Text> Use your{' '}
+                        <Text as="b"> $BLD</Text>. Use your{' '}
                         <Text as="b"> $BLD</Text> to upgrade your buildoor and
                         receive perks within the community!
                     </Text>
@@ -121,10 +143,7 @@ const Connected: FC = () => {
                 onClick={handleClick}
                 isLoading={isMinting}
             >
-                <HStack>
-                    <Text>mint buildoor</Text>
-                    <ArrowForwardIcon />
-                </HStack>
+                <Text>mint buildoor</Text>
             </Button>
         </VStack>
     );

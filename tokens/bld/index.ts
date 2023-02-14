@@ -125,7 +125,7 @@ async function main() {
     const payer = await initializeKeypair(connection);
 
     const programId = new web3.PublicKey(
-        '7xGGBdDdGoYv6p2FLuba19o8zkdUD8hbJgxn3rfg9CdY'
+        '6g6fFCUvii2zQM4yjSFT5aaGndm96eCFixxJqcP5xFWz'
     );
 
     await createBldToken(connection, payer, programId);

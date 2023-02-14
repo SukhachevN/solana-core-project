@@ -1,28 +1,63 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { token } from '@metaplex-foundation/js';
+import { BN, Program } from '@project-serum/anchor';
+import { PublicKey } from '@solana/web3.js';
+import { AnchorNftStaking } from './anchor_nft_staking';
 import { PROGRAM_ID } from './constants';
-import * as borsh from '@project-serum/borsh';
-
-const userStakeAccountLayout = borsh.struct([
-    borsh.bool('isInitialized'),
-    borsh.publicKey('tokenAccount'),
-    borsh.i64('stakeStartTime'),
-    borsh.i64('lastRedeem'),
-    borsh.publicKey('userPubkey'),
-    borsh.u8('state'),
-]);
 
 export async function getStakeAccount(
-    connection: Connection,
+    program: any,
     user: PublicKey,
     tokenAccount: PublicKey
-): Promise<any> {
-    const [accountPubkey] = PublicKey.findProgramAddressSync(
+): Promise<StakeAccount> {
+    console.log(program.programId);
+    const [pda] = PublicKey.findProgramAddressSync(
         [user.toBuffer(), tokenAccount.toBuffer()],
         PROGRAM_ID
     );
+    let account;
+    try {
+        account = await program.account.userStakeInfo.fetch(pda);
+    } catch (error) {
+        console.log(error);
+    }
 
-    const account = await connection.getAccountInfo(accountPubkey);
+    return new StakeAccount(account);
+}
 
-    if (!account) throw {};
-    return userStakeAccountLayout.decode(account.data);
+export class StakeAccount {
+    tokenAccount: PublicKey;
+    stakeStartTime: BN;
+    lastStakeRedeem: BN;
+    stakeState: { staked: boolean; unstaked: boolean };
+    isInitialized: boolean;
+
+    constructor(params: {
+        tokenAccount: PublicKey;
+        stakeStartTime: BN;
+        lastStakeRedeem: BN;
+        stakeState: { staked: boolean; unstaked: boolean };
+        isInitialized: boolean;
+    }) {
+        this.tokenAccount = params.tokenAccount;
+        this.stakeStartTime = params.stakeStartTime;
+        this.lastStakeRedeem = params.lastStakeRedeem;
+        this.stakeState = params.stakeState;
+        this.isInitialized = params.isInitialized;
+    }
+
+    daysStaked(): number {
+        const seconds = new BN(Date.now() / 1000)
+            .sub(this.stakeStartTime)
+            .toNumber();
+
+        return seconds / (24 * 60 * 60);
+    }
+
+    claimable(): number {
+        const seconds = new BN(Date.now() / 1000)
+            .sub(this.lastStakeRedeem)
+            .toNumber();
+
+        return 10 * (seconds / (24 * 60 * 60));
+    }
 }
