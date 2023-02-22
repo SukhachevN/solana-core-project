@@ -82,8 +82,6 @@ const Connected: FC = () => {
         async (event) => {
             if (event.defaultPrevented) return;
 
-            console.log(candyMachine);
-
             if (!walletAdapter.connected || !candyMachine) {
                 return;
             }

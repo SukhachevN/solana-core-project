@@ -39,12 +39,10 @@ const Stake: NextPage<StakeProps> = ({ mintAddress, imageSrc }) => {
         const mint = new PublicKey(mintAddress);
 
         try {
-            console.log('start seatch nft', mint.toString());
             metaplex
                 .nfts()
                 .findByMint({ mintAddress: mint })
                 .then((nft) => {
-                    console.log(nft);
                     setNftData(nft);
                     fetchstate(nft.mint.address);
                 })
