@@ -31,7 +31,6 @@ export const StakeOptionsDisplay = ({
     const workspace = useWorkspace();
 
     useEffect(() => {
-        console.log(nftData);
         if (nftData) {
             connection
                 .getTokenLargestAccounts(nftData.mint.address)
@@ -60,11 +59,6 @@ export const StakeOptionsDisplay = ({
     };
 
     const handleStake = useCallback(async () => {
-        console.log(
-            walletAdapter.connected,
-            walletAdapter.publicKey,
-            nftTokenAccount
-        );
         if (
             !walletAdapter.connected ||
             !walletAdapter.publicKey ||
